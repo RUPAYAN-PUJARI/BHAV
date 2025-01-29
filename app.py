@@ -1,3 +1,6 @@
+import ssl
+import warnings
+import requests
 from flask import Flask, request, jsonify
 from gtts import gTTS
 import base64
@@ -8,6 +11,10 @@ import sounddevice as sd # type: ignore
 import speech_recognition as sr
 from io import BytesIO
 from groq import Groq # type: ignore
+
+requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
+
+ssl._create_default_https_context = ssl._create_unverified_context
 
 app = Flask(__name__)
 
