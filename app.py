@@ -1,7 +1,7 @@
 import ssl
 import warnings
 import requests
-from flask_cors import CORS
+#from flask_cors import CORS
 from flask import Flask, request, jsonify
 from gtts import gTTS
 import base64
@@ -11,8 +11,9 @@ import sounddevice as sd  # type: ignore
 import speech_recognition as sr
 from io import BytesIO
 from groq import Groq  # type: ignore
-from nltk.sentiment import SentimentIntensityAnalyzer
 import nltk
+from nltk.sentiment import SentimentIntensityAnalyzer
+
 
 # Download VADER lexicon if not already available
 nltk.download('vader_lexicon')
@@ -21,7 +22,7 @@ requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.
 ssl._create_default_https_context = ssl._create_unverified_context
 
 app = Flask(__name__)
-CORS(app)
+#CORS(app)
 
 # Load config
 with open("config.json") as config_file:
