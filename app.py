@@ -13,7 +13,7 @@ from io import BytesIO
 from groq import Groq  # type: ignore
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
-
+from mtranslate import translate  # type: ignore
 
 # Download VADER lexicon if not already available
 nltk.download('vader_lexicon')
@@ -36,9 +36,7 @@ client = Groq()
 sia = SentimentIntensityAnalyzer()
 
 def custom_translate(text, to_lang="en", from_lang="bn"):
-    url = f"https://translate.googleapis.com/translate_a/single?client=gtx&sl={from_lang}&tl={to_lang}&dt=t&q={text}"
-    response = requests.get(url, verify=False)  # Disable SSL verification
-    return response.json()[0][0][0]
+    return translate(text, to_lang, from_lang)
 
 # Endpoint to handle chat
 @app.route("/chat", methods=["POST"])
@@ -59,7 +57,7 @@ def chat():
         {"role": "system", "content": "A helpful polite assistant."},
         {"role": "user", "content": translated_prompt}
     ]
-    response = client.chat.completions.create(model="llama-3.3-70b-specdec", messages=messages)
+    response = client.chat.completions.create(model="llama-3.1-8b-instant", messages=messages)
     assistant_response = response.choices[0].message.content
     
     # Translate response back to Bengali
@@ -68,7 +66,7 @@ def chat():
     # Modify response if sentiment is negative
     call_number = None
     if is_negative:
-        translated_response += "\n\n(ALERTING EMERGENCY NUMBER!!)"
+        translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
         call_number = "+919875357018"  # Example emergency number
     
     # Convert response to speech in Bengali
