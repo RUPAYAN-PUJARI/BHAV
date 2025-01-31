@@ -58,7 +58,7 @@ def chat():
         {"role": "system", "content": "A helpful polite assistant."},
         {"role": "user", "content": translated_prompt}
     ]
-    response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
+    response = client.chat.completions.create(model="llama-3.3-70b-specdec", messages=messages)
     assistant_response = response.choices[0].message.content
     
     # Translate response back to Bengali

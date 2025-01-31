@@ -44,6 +44,7 @@ mpmath @ file:///C:/b/abs_7833jrbiox/croot/mpmath_1690848321154/work
 mtranslate==1.8
 narwhals==1.5.5
 networkx @ file:///C:/b/abs_3bxnu56g9d/croot/networkx_1717597507456/work
+nltk==3.9.1
 numpy==1.26.4
 ollama==0.3.1
 packaging @ file:///C:/b/abs_c3vlh0z4jw/croot/packaging_1720101866539/work
