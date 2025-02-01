@@ -67,7 +67,7 @@ def chat():
     call_number = None
     if is_negative:
         translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
-        call_number = "+919875357018"  # Example emergency number
+        call_number = "1098"  # Example emergency number
     
     # Convert response to speech in Bengali
     audio_fp = BytesIO()
