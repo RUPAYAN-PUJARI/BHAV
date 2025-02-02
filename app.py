@@ -94,6 +94,6 @@ def chat():
     
     return jsonify({"response": translated_response, "audio": audio_base64, "call": call_number})
 
-if __name__ == "_main_":
+if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
