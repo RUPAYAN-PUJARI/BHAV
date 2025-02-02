@@ -15,6 +15,7 @@ import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from mtranslate import translate  # type: ignore
 import re  # Added for text cleaning
+import threading
 
 # Download VADER lexicon if not already available
 nltk.download('vader_lexicon')
@@ -36,8 +37,36 @@ client = Groq()
 # Initialize sentiment analyzer
 sia = SentimentIntensityAnalyzer()
 
+# Global variable to track the current audio playback
+current_audio_thread = None
+
+def stop_current_audio():
+    global current_audio_thread
+    if current_audio_thread and current_audio_thread.is_alive():
+        current_audio_thread.do_run = False
+        current_audio_thread.join()
+
+
+def play_audio(audio_data):
+    global current_audio_thread
+    stop_current_audio()
+    
+    def audio_thread():
+        t = threading.currentThread()
+        with BytesIO(audio_data) as audio_fp:
+            audio_fp.seek(0)
+            data, fs = sd.rec(None, samplerate=24000, channels=1, dtype='int16')
+            if getattr(t, "do_run", True):
+                sd.play(data, fs)
+                sd.wait()
+    
+    current_audio_thread = threading.Thread(target=audio_thread)
+    current_audio_thread.start()
+
+
 def custom_translate(text, to_lang="en", from_lang="bn"):
     return translate(text, to_lang, from_lang)
+
 
 def clean_text_for_tts(text):
     """
@@ -49,21 +78,17 @@ def clean_text_for_tts(text):
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     return text
 
-# Endpoint to handle chat
+
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
     user_prompt = data.get("prompt", "")
     
-    # Translate the user's message to English if in Bengali
     translated_prompt = custom_translate(user_prompt, 'en', 'bn')
     
-    # Analyze sentiment
     sentiment_score = sia.polarity_scores(translated_prompt)["compound"]
-    print(f"Sentiment Analysis Score: {sentiment_score}")
-    is_negative = sentiment_score < -0.5  # Threshold for negativity
+    is_negative = sentiment_score < -0.5  
     
-    # Interact with Groq API
     messages = [
         {"role": "system", "content": "A helpful polite assistant."},
         {"role": "user", "content": translated_prompt}
@@ -71,28 +96,27 @@ def chat():
     response = client.chat.completions.create(model="llama-3.2-3b-preview", messages=messages)
     assistant_response = response.choices[0].message.content
     
-    # Translate response back to Bengali
     translated_response = custom_translate(assistant_response, 'bn', 'en')
 
-    # Modify response if sentiment is negative
     call_number = None
     if is_negative:
         translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
-        call_number = "1098"  # Example emergency number
+        call_number = "1098"
     
-    # Clean the response before converting to speech
     cleaned_response = clean_text_for_tts(translated_response)
-
-    # Convert response to speech in Bengali
+    
     audio_fp = BytesIO()
-    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld = "com")  # Use cleaned text
+    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld="com")
     tts.write_to_fp(audio_fp)
     audio_fp.seek(0)
     
-    # Encode audio to base64
-    audio_base64 = base64.b64encode(audio_fp.read()).decode()
+    audio_data = audio_fp.read()
+    play_audio(audio_data)  # Ensure only one audio is played at a time
+    
+    audio_base64 = base64.b64encode(audio_data).decode()
     
     return jsonify({"response": translated_response, "audio": audio_base64, "call": call_number})
+
 
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
