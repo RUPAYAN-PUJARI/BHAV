@@ -14,6 +14,7 @@ from groq import Groq  # type: ignore
 import nltk
 from nltk.sentiment import SentimentIntensityAnalyzer
 from mtranslate import translate  # type: ignore
+import re  # Added for text cleaning
 
 # Download VADER lexicon if not already available
 nltk.download('vader_lexicon')
@@ -37,6 +38,16 @@ sia = SentimentIntensityAnalyzer()
 
 def custom_translate(text, to_lang="en", from_lang="bn"):
     return translate(text, to_lang, from_lang)
+
+def clean_text_for_tts(text):
+    """
+    Cleans the AI response by removing unwanted symbols, extra spaces, and special characters
+    that should not be read aloud.
+    """
+    text = text.replace('*', '')  # Remove stars
+    text = re.sub(r'[(){}<>]', '', text)  # Remove brackets and similar symbols
+    text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
+    return text
 
 # Endpoint to handle chat
 @app.route("/chat", methods=["POST"])
@@ -69,9 +80,12 @@ def chat():
         translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
         call_number = "1098"  # Example emergency number
     
+    # Clean the response before converting to speech
+    cleaned_response = clean_text_for_tts(translated_response)
+
     # Convert response to speech in Bengali
     audio_fp = BytesIO()
-    tts = gTTS(text=translated_response, lang='bn', slow=False)
+    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld = "com")  # Use cleaned text
     tts.write_to_fp(audio_fp)
     audio_fp.seek(0)
     
@@ -80,6 +94,6 @@ def chat():
     
     return jsonify({"response": translated_response, "audio": audio_base64, "call": call_number})
 
-if __name__ == "__main__":
+if __name__ == "_main_":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
