@@ -45,7 +45,8 @@ def clean_text_for_tts(text):
     that should not be read aloud.
     """
     text = text.replace('*', '')  # Remove stars
-    text = re.sub(r'=[/(){}<>\]', '', text)  # Remove brackets and similar symbols
+    text = re.sub(r'[=\\/]', '', text)
+    text = re.sub(r'[(){}<>]', '', text)  # Remove brackets and similar symbols
     text = re.sub(r'\s+', ' ', text).strip()  # Remove extra spaces
     return text
 
