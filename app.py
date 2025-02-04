@@ -24,7 +24,7 @@ nltk.download('vader_lexicon')
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 ssl._create_default_https_context = ssl._create_unverified_context
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)
 
 # Configure SQLite database
