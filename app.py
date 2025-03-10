@@ -21,7 +21,7 @@ nltk.download('vader_lexicon')
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 ssl._create_default_https_context = ssl._create_unverified_context
 
-app = Flask(_name_)
+app = Flask(__name__)
 CORS(app)
 
 # Load API key from config file
@@ -113,6 +113,6 @@ def chat():
         }
     })
 
-if _name_ == "_main_":
+if __name__ == "_main_":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
