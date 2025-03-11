@@ -105,12 +105,7 @@ def chat():
         "response": final_response,
         "audio": audio_base64,
         "call": call_number,
-        "sentiment": {
-            "compound": sentiment_scores["compound"],
-            "positive": sentiment_scores["pos"],
-            "negative": sentiment_scores["neg"],
-            "neutral": sentiment_scores["neu"]
-        }
+        "sentiment": sentiment_compound,
     })
 
 if __name__ == "_main_":
