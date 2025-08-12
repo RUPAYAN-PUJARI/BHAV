@@ -25,13 +25,16 @@ ssl._create_default_https_context = ssl._create_unverified_context
 app = Flask(__name__)
 CORS(app)
 
-# Load config
-with open("config.json") as config_file:
-    config_data = json.load(config_file)
+# Get API key from environment
+GROQ_API_KEY = os.getenv("GROQ_API_KEY")
+if not GROQ_API_KEY:
+    raise RuntimeError("GROQ_API_KEY not found in environment variables.")
 
-GROQ_API_KEY = config_data["GROQ_API_KEY"]
-os.environ["GROQ_API_KEY"] = GROQ_API_KEY
-client = Groq()
+# Debug log - remove after confirming on Render
+print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "*****")
+
+# Initialize Groq client
+client = Groq(api_key=GROQ_API_KEY)
 
 # Initialize sentiment analyzer
 sia = SentimentIntensityAnalyzer()
@@ -86,7 +89,7 @@ def chat():
 
     # Convert response to speech in Bengali
     audio_fp = BytesIO()
-    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld = "com")  # Use cleaned text
+    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld="com")
     tts.write_to_fp(audio_fp)
     audio_fp.seek(0)
     
