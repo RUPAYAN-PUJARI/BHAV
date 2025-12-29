@@ -98,6 +98,10 @@ def chat():
     
     return jsonify({"response": translated_response, "audio": audio_base64, "call": call_number})
 
+@app.route("/ping")
+def ping():
+    return "OK", 200
+
 if __name__ == "__main__":
     port = int(os.environ.get("PORT", 5000))
     app.run(host='0.0.0.0', port=port)
