@@ -37,7 +37,7 @@ print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "*****"
 client = Groq(api_key=GROQ_API_KEY)
 
 # Initialize sentiment analyzer
-sia = SentimentIntensityAnalyzer()
+#sia = SentimentIntensityAnalyzer()
 
 def custom_translate(text, to_lang="en", from_lang="bn"):
     return translate(text, to_lang, from_lang)
@@ -63,9 +63,9 @@ def chat():
     translated_prompt = custom_translate(user_prompt, 'en', 'bn')
     
     # Analyze sentiment
-    sentiment_score = sia.polarity_scores(translated_prompt)["compound"]
-    print(f"Sentiment Analysis Score: {sentiment_score}")
-    is_negative = sentiment_score < -0.5  # Threshold for negativity
+    #sentiment_score = sia.polarity_scores(translated_prompt)["compound"]
+    #print(f"Sentiment Analysis Score: {sentiment_score}")
+    #is_negative = sentiment_score < -0.5  # Threshold for negativity
     
     # Interact with Groq API
     messages = [
@@ -80,9 +80,9 @@ def chat():
 
     # Modify response if sentiment is negative
     call_number = None
-    if is_negative:
-        translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
-        call_number = "1098"  # Example emergency number
+    #if is_negative:
+    #    translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
+    #    call_number = "1098"  # Example emergency number
     
     # Clean the response before converting to speech
     cleaned_response = clean_text_for_tts(translated_response)
