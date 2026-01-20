@@ -4,5 +4,6 @@ requests==2.32.3
 gTTS==2.5.4
 groq==0.16.0
 nltk==3.9.1
-mtranslate==1.8
+googletrans==4.0.0-rc1
+langdetect
 gunicorn==23.0.0
