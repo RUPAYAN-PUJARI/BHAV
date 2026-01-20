@@ -1,14 +1,13 @@
 import ssl
-import warnings
 import requests
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 from gtts import gTTS
 import base64
-import json
 import os
 from io import BytesIO
 from groq import Groq  # type: ignore
+from mtranslate import translate  # type: ignore
 import re  # Added for text cleaning
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -18,6 +17,7 @@ app = Flask(__name__)
 CORS(app)
 
 #Get API key from environment
+
 GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 if not GROQ_API_KEY:
     raise RuntimeError("GROQ_API_KEY not found in environment variables.")
@@ -28,26 +28,8 @@ print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "***")
 #Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
-LIBRE_URL = "https://libretranslate.com/translate"
-
-def translate_text(text, source, target):
-    if not text.strip():
-        return text
-
-    payload = {
-        "q": text,
-        "source": source,
-        "target": target,
-        "format": "text"
-    }
-
-    try:
-        r = requests.post(LIBRE_URL, json=payload, timeout=10)
-        r.raise_for_status()
-        return r.json()["translatedText"]
-    except Exception as e:
-        print("Translation failed:", e)
-        return text
+def custom_translate(text, to_lang="en", from_lang="bn"):
+    return translate(text, to_lang, from_lang)
 
 def clean_text_for_tts(text):
     """
@@ -64,42 +46,36 @@ def clean_text_for_tts(text):
 @app.route("/chat", methods=["POST"])
 def chat():
     data = request.json
-    user_prompt = data.get("prompt", "").strip()
+    user_prompt = data.get("prompt", "")
 
-    # If Bengali → English
-    model_input = translate_text(user_prompt, "bn", "en")
+    # Translate the user's message to English if in Bengali
+    translated_prompt = custom_translate(user_prompt, 'en', 'bn')
 
+    # Interact with Groq API
     messages = [
-        {
-            "role": "system",
-            "content": (
-                "A polite helpful assistant. "
-                "Your final answer MUST be in Bengali only."
-            )
-        },
-        {"role": "user", "content": model_input}
+        {"role": "system", "content": "A helpful polite assistant."},
+        {"role": "user", "content": translated_prompt}
     ]
+    response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
+    assistant_response = response.choices[0].message.content
 
-    response = client.chat.completions.create(
-        model="llama-3.3-70b-versatile",
-        messages=messages
-    )
+    # Translate response back to Bengali
+    translated_response = custom_translate(assistant_response, 'bn', 'en')
+    call_number = None
 
-    assistant_response = response.choices[0].message.content.strip()
+    # Clean the response before converting to speech
+    cleaned_response = clean_text_for_tts(translated_response)
 
-    # ALWAYS English → Bengali
-    final_response = translate_text(assistant_response, "en", "bn")
-
-    cleaned = clean_text_for_tts(final_response)
-
+    # Convert response to speech in Bengali
     audio_fp = BytesIO()
-    gTTS(text=cleaned, lang="bn").write_to_fp(audio_fp)
+    tts = gTTS(text=cleaned_response, lang='bn', slow=False, tld="com")
+    tts.write_to_fp(audio_fp)
     audio_fp.seek(0)
 
-    return jsonify({
-        "response": final_response,
-        "audio": base64.b64encode(audio_fp.read()).decode()
-    })
+    # Encode audio to base64
+    audio_base64 = base64.b64encode(audio_fp.read()).decode()
+
+    return jsonify({"response": translated_response, "audio": audio_base64, "call": call_number})
 
 @app.route("/ping")
 def ping():
