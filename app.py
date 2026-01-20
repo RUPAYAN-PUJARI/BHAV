@@ -9,8 +9,6 @@ import json
 import os
 from io import BytesIO
 from groq import Groq  # type: ignore
-from googletrans import Translator
-from langdetect import detect, LangDetectException
 import re  # Added for text cleaning
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -30,30 +28,25 @@ print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "***")
 #Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
-translator = Translator()
+LIBRE_URL = "https://libretranslate.com/translate"
 
-def detect_language(text):
-    try:
-        return detect(text)
-    except LangDetectException:
-        return "en"
-
-def translate_bn_to_en(text):
+def translate_text(text, source, target):
     if not text.strip():
         return text
-    try:
-        return translator.translate(text, src="bn", dest="en").text
-    except Exception as e:
-        print("BN→EN translation error:", e)
-        return text
 
-def translate_en_to_bn(text):
-    if not text.strip():
-        return text
+    payload = {
+        "q": text,
+        "source": source,
+        "target": target,
+        "format": "text"
+    }
+
     try:
-        return translator.translate(text, src="en", dest="bn").text
+        r = requests.post(LIBRE_URL, json=payload, timeout=10)
+        r.raise_for_status()
+        return r.json()["translatedText"]
     except Exception as e:
-        print("EN→BN translation error:", e)
+        print("Translation failed:", e)
         return text
 
 def clean_text_for_tts(text):
@@ -73,23 +66,15 @@ def chat():
     data = request.json
     user_prompt = data.get("prompt", "").strip()
 
-    # Step 1: Detect language
-    detected_lang = detect_language(user_prompt)
+    # If Bengali → English
+    model_input = translate_text(user_prompt, "bn", "en")
 
-    # Step 2: Normalize input to English
-    if detected_lang.startswith("bn"):
-        model_input = translate_bn_to_en(user_prompt)
-    else:
-        model_input = user_prompt
-
-    # Step 3: LLM call
     messages = [
         {
             "role": "system",
             "content": (
-                "A polite and helpful assistant. "
-                "Your final response MUST be in Bengali (Bangla) only. "
-                "Do not use English words or sentences."
+                "A polite helpful assistant. "
+                "Your final answer MUST be in Bengali only."
             )
         },
         {"role": "user", "content": model_input}
@@ -102,22 +87,18 @@ def chat():
 
     assistant_response = response.choices[0].message.content.strip()
 
-    # Step 4: FORCE Bengali output
-    translated_response = translate_en_to_bn(assistant_response)
+    # ALWAYS English → Bengali
+    final_response = translate_text(assistant_response, "en", "bn")
 
-    # Step 5: TTS cleanup
-    cleaned_response = clean_text_for_tts(translated_response)
+    cleaned = clean_text_for_tts(final_response)
 
     audio_fp = BytesIO()
-    gTTS(text=cleaned_response, lang="bn", slow=False).write_to_fp(audio_fp)
+    gTTS(text=cleaned, lang="bn").write_to_fp(audio_fp)
     audio_fp.seek(0)
 
-    audio_base64 = base64.b64encode(audio_fp.read()).decode()
-
     return jsonify({
-        "response": translated_response,
-        "audio": audio_base64,
-        "call": None
+        "response": final_response,
+        "audio": base64.b64encode(audio_fp.read()).decode()
     })
 
 @app.route("/ping")
