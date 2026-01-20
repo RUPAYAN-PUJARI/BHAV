@@ -7,7 +7,8 @@ import base64
 import os
 from io import BytesIO
 from groq import Groq  # type: ignore
-from deep_translator import LibreTranslator, detect
+from deep_translator import LibreTranslator
+from langdetect import detect, LangDetectException
 import re  # Added for text cleaning
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
@@ -64,15 +65,17 @@ def chat():
     # Translate the user's message to English if in Bengali
     #translated_prompt = custom_translate(user_prompt, 'en', 'bn')
     # Detect input language
+    # Detect input language safely
     try:
         detected_lang = detect(user_prompt)
-    except Exception:
+    except LangDetectException:
         detected_lang = "en"
-    # Convert input to English for the LLM
-    if detected_lang == "bn":
-        translated_prompt = custom_translate(user_prompt, 'en', 'bn')
+
+    # Normalize language codes
+    if detected_lang.startswith("bn"):
+        translated_prompt = custom_translate(user_prompt, "en", "bn")
     else:
-        translated_prompt = user_prompt  # already English
+        translated_prompt = user_prompt
     
     # Interact with Groq API
     messages = [
