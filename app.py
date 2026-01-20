@@ -1,23 +1,14 @@
 import ssl
-import warnings
 import requests
 from flask_cors import CORS
 from flask import Flask, request, jsonify
 from gtts import gTTS
 import base64
-import json
 import os
-import sounddevice as sd  # type: ignore
-import speech_recognition as sr
 from io import BytesIO
 from groq import Groq  # type: ignore
-import nltk
-from nltk.sentiment import SentimentIntensityAnalyzer
-from mtranslate import translate  # type: ignore
+from deep_translator import LibreTranslator
 import re  # Added for text cleaning
-
-# Download VADER lexicon if not already available
-nltk.download('vader_lexicon')
 
 requests.packages.urllib3.disable_warnings(requests.packages.urllib3.exceptions.InsecureRequestWarning)
 ssl._create_default_https_context = ssl._create_unverified_context
@@ -36,11 +27,22 @@ print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "*****"
 # Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
-# Initialize sentiment analyzer
-#sia = SentimentIntensityAnalyzer()
-
 def custom_translate(text, to_lang="en", from_lang="bn"):
-    return translate(text, to_lang, from_lang)
+    """
+    Uses LibreTranslate via deep-translator
+    Free, open-source, and significantly better than mtranslate for Bengali.
+    """
+    if not text.strip():
+        return text
+
+    try:
+        return LibreTranslator(
+            source=from_lang,
+            target=to_lang
+        ).translate(text)
+    except Exception as e:
+        print("Translation error:", e)
+        return text
 
 def clean_text_for_tts(text):
     """
@@ -62,11 +64,6 @@ def chat():
     # Translate the user's message to English if in Bengali
     translated_prompt = custom_translate(user_prompt, 'en', 'bn')
     
-    # Analyze sentiment
-    #sentiment_score = sia.polarity_scores(translated_prompt)["compound"]
-    #print(f"Sentiment Analysis Score: {sentiment_score}")
-    #is_negative = sentiment_score < -0.5  # Threshold for negativity
-    
     # Interact with Groq API
     messages = [
         {"role": "system", "content": "A helpful polite assistant."},
@@ -78,11 +75,7 @@ def chat():
     # Translate response back to Bengali
     translated_response = custom_translate(assistant_response, 'bn', 'en')
 
-    # Modify response if sentiment is negative
     call_number = None
-    #if is_negative:
-    #    translated_response += "\n\n(সতর্কতা জরুরি নম্বর)"
-    #    call_number = "1098"  # Example emergency number
     
     # Clean the response before converting to speech
     cleaned_response = clean_text_for_tts(translated_response)
