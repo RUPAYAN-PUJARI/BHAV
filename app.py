@@ -53,7 +53,7 @@ def chat():
 
     # Interact with Groq API
     messages = [
-        {"role": "system", "content": "A helpful polite assistant."},
+        {"role": "system", "content": "A helpful polite assistant. Your name is BHAV. When asked about your name, you should say that it is 'BHAV'."},
         {"role": "user", "content": translated_prompt}
     ]
     response = client.chat.completions.create(model="llama-3.3-70b-versatile", messages=messages)
