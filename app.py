@@ -26,6 +26,10 @@ if not GROQ_API_KEY:
 
 print("DEBUG: Loaded GROQ_API_KEY from environment:", GROQ_API_KEY[:5] + "***")
 
+# Groq model. Override with GROQ_MODEL without editing code when a model is retired.
+# Llama models were removed from Groq's free/dev tier on 2026-08-16; gpt-oss is production tier.
+GROQ_MODEL = os.getenv("GROQ_MODEL", "openai/gpt-oss-120b")
+
 # Initialize Groq client
 client = Groq(api_key=GROQ_API_KEY)
 
@@ -72,7 +76,7 @@ def chat():
     ]
 
     response = client.chat.completions.create(
-        model="meta-llama/llama-4-scout-17b-16e-instruct",
+        model=GROQ_MODEL,
         messages=messages
     )
 
